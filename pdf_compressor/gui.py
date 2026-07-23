@@ -51,6 +51,7 @@ class MainWindow(QMainWindow):
 
         layout.addWidget(self._build_source_group())
         layout.addWidget(self._build_dpi_group())
+        layout.addWidget(self._build_size_group())
         layout.addWidget(self._build_output_group())
         layout.addLayout(self._build_action_row())
 
@@ -86,6 +87,23 @@ class MainWindow(QMainWindow):
         row.addWidget(self.dpi_spin)
         row.addStretch(1)
         hint = QLabel("仅降低已超过目标 DPI 的图片分辨率，PDF 其它内容与结构保持不变。")
+        hint.setWordWrap(True)
+        row.addWidget(hint, stretch=2)
+        return group
+
+    def _build_size_group(self) -> QGroupBox:
+        group = QGroupBox("文件大小阈值")
+        row = QHBoxLayout(group)
+        row.addWidget(QLabel("仅压缩大于："))
+        self.min_size_spin = QSpinBox()
+        self.min_size_spin.setRange(0, 2_147_483_647)
+        self.min_size_spin.setValue(0)
+        self.min_size_spin.setSuffix(" B")
+        self.min_size_spin.setSpecialValueText("不限制")
+        self.min_size_spin.setSingleStep(1024)
+        row.addWidget(self.min_size_spin)
+        row.addStretch(1)
+        hint = QLabel("单位为字节（B）。设为 0（不限制）时处理全部 PDF；大于 0 时仅压缩文件大小超过该值的 PDF。")
         hint.setWordWrap(True)
         row.addWidget(hint, stretch=2)
         return group
@@ -197,6 +215,7 @@ class MainWindow(QMainWindow):
             target_dpi=self.dpi_spin.value(),
             mode=mode,
             output_dir=output_dir,
+            min_file_size=self.min_size_spin.value(),
         )
         self._worker.progress.connect(self._on_progress)
         self._worker.log.connect(self.log_view.appendPlainText)
@@ -242,6 +261,7 @@ class MainWindow(QMainWindow):
         self.cancel_btn.setEnabled(running)
         self.source_edit.setEnabled(not running)
         self.dpi_spin.setEnabled(not running)
+        self.min_size_spin.setEnabled(not running)
         for btn in (self.radio_overwrite, self.radio_copy, self.radio_output_dir):
             btn.setEnabled(not running)
         if running:

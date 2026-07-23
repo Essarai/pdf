@@ -17,8 +17,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
-import fitz  # PyMuPDF
-from PIL import Image
+import fitz  # PyMuPDF  # pyright: ignore[reportMissingImports]
+from PIL import Image  # pyright: ignore[reportMissingImports]
 
 try:
     _RESAMPLE = Image.Resampling.LANCZOS  # Pillow >= 9.1
@@ -52,7 +52,8 @@ class FileResult:
     images_total: int = 0
     images_compressed: int = 0
     images_skipped: int = 0
-    skipped: bool = False  # True 表示整个文件无需压缩（所有图片已达标或处理失败）
+    skipped: bool = False  # True 表示整个文件无需压缩（所有图片已达标、过小或处理失败）
+    skip_reason: Optional[str] = None
     error: Optional[str] = None
     notes: List[str] = field(default_factory=list)
 
@@ -287,8 +288,13 @@ def compress_pdf(
     mode: OutputMode,
     source_root: Optional[Path] = None,
     output_dir: Optional[Path] = None,
+    min_file_size: int = 0,
 ) -> FileResult:
-    """压缩单个 PDF 文件中的图片，并按指定方式保存。"""
+    """压缩单个 PDF 文件中的图片，并按指定方式保存。
+
+    min_file_size：仅当文件大小（字节）严格大于该阈值时才压缩；
+    为 0 表示不限制。未达阈值的文件会标记为 skipped，不会写入输出。
+    """
 
     input_path = Path(input_path)
     result = FileResult(input_path=input_path)
@@ -297,6 +303,14 @@ def compress_pdf(
         result.original_size = input_path.stat().st_size
     except OSError as exc:
         result.error = f"无法读取文件：{exc}"
+        return result
+
+    if min_file_size > 0 and result.original_size <= min_file_size:
+        result.skipped = True
+        result.skip_reason = (
+            f"文件大小 {result.original_size}B ≤ 阈值 {min_file_size}B"
+        )
+        result.new_size = result.original_size
         return result
 
     try:
@@ -325,6 +339,9 @@ def compress_pdf(
             # 没有任何图片被压缩：原文件保留不变；复制/输出目录模式下仍需要
             # 产生目标文件（原样复制），以符合用户对输出方式的预期。
             result.skipped = True
+            result.skip_reason = (
+                f"{images_total} 张图片均已达标或不支持处理"
+            )
             result.new_size = result.original_size
             doc.close()
             if mode is not OutputMode.OVERWRITE and output_path != input_path:
@@ -378,11 +395,13 @@ def compress_directory(
     output_dir: Optional[Path] = None,
     progress_cb: Optional[Callable[[int, int, FileResult], None]] = None,
     should_cancel: Optional[Callable[[], bool]] = None,
+    min_file_size: int = 0,
 ) -> List[FileResult]:
     """递归压缩 root_dir 下所有 PDF。
 
     progress_cb(done_count, total_count, result) 在每个文件处理完后被调用。
     should_cancel() 返回 True 时会中止后续文件的处理（已处理的文件不会回滚）。
+    min_file_size：仅压缩大小（字节）严格大于该值的文件；0 表示不限制。
     """
 
     root_dir = Path(root_dir)
@@ -399,6 +418,7 @@ def compress_directory(
             mode,
             source_root=root_dir,
             output_dir=output_dir,
+            min_file_size=min_file_size,
         )
         results.append(result)
         if progress_cb:

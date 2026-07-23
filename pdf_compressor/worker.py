@@ -26,6 +26,7 @@ class CompressWorker(QThread):
         target_dpi: float,
         mode: OutputMode,
         output_dir: Optional[Path] = None,
+        min_file_size: int = 0,
         parent=None,
     ):
         super().__init__(parent)
@@ -33,6 +34,7 @@ class CompressWorker(QThread):
         self.target_dpi = target_dpi
         self.mode = mode
         self.output_dir = Path(output_dir) if output_dir else None
+        self.min_file_size = max(0, int(min_file_size))
         self._cancelled = False
 
     def cancel(self) -> None:
@@ -51,7 +53,8 @@ class CompressWorker(QThread):
         if result.error:
             return f"{prefix} —— 错误：{result.error}"
         if result.skipped:
-            return f"{prefix} —— 无需压缩（{result.images_total} 张图片均已达标或不支持处理）"
+            reason = result.skip_reason or "无需压缩"
+            return f"{prefix} —— 跳过（{reason}）"
         return (
             f"{prefix} —— {result.images_compressed}/{result.images_total} 张图片已压缩，"
             f"{_fmt_size(result.original_size)} → {_fmt_size(result.new_size)} "
@@ -67,7 +70,12 @@ class CompressWorker(QThread):
             return
 
         total = len(pdfs)
-        self.log.emit(f"共找到 {total} 个 PDF 文件，目标 DPI = {self.target_dpi}")
+        size_hint = (
+            f"，仅处理大于 {self.min_file_size}B 的文件"
+            if self.min_file_size > 0
+            else ""
+        )
+        self.log.emit(f"共找到 {total} 个 PDF 文件，目标 DPI = {self.target_dpi}{size_hint}")
 
         results = compress_directory(
             self.root_dir,
@@ -76,6 +84,7 @@ class CompressWorker(QThread):
             output_dir=self.output_dir,
             progress_cb=self._on_progress,
             should_cancel=self._should_cancel,
+            min_file_size=self.min_file_size,
         )
 
         processed = len(results)
