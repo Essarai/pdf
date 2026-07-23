@@ -71,7 +71,7 @@ class CompressWorker(QThread):
 
         total = len(pdfs)
         size_hint = (
-            f"，仅处理大于 {self.min_file_size}B 的文件"
+            f"，仅处理大于 {self.min_file_size / 1024:.0f}KB 的文件"
             if self.min_file_size > 0
             else ""
         )

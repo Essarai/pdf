@@ -96,14 +96,15 @@ class MainWindow(QMainWindow):
         row = QHBoxLayout(group)
         row.addWidget(QLabel("仅压缩大于："))
         self.min_size_spin = QSpinBox()
-        self.min_size_spin.setRange(0, 2_147_483_647)
+        # 内部按字节比较；UI 以 KB 输入，上限约 2GiB。
+        self.min_size_spin.setRange(0, 2_097_152)
         self.min_size_spin.setValue(0)
-        self.min_size_spin.setSuffix(" B")
+        self.min_size_spin.setSuffix(" KB")
         self.min_size_spin.setSpecialValueText("不限制")
-        self.min_size_spin.setSingleStep(1024)
+        self.min_size_spin.setSingleStep(64)
         row.addWidget(self.min_size_spin)
         row.addStretch(1)
-        hint = QLabel("单位为字节（B）。设为 0（不限制）时处理全部 PDF；大于 0 时仅压缩文件大小超过该值的 PDF。")
+        hint = QLabel("单位为 KB。设为 0（不限制）时处理全部 PDF；大于 0 时仅压缩文件大小超过该值的 PDF。")
         hint.setWordWrap(True)
         row.addWidget(hint, stretch=2)
         return group
@@ -215,7 +216,7 @@ class MainWindow(QMainWindow):
             target_dpi=self.dpi_spin.value(),
             mode=mode,
             output_dir=output_dir,
-            min_file_size=self.min_size_spin.value(),
+            min_file_size=self.min_size_spin.value() * 1024,
         )
         self._worker.progress.connect(self._on_progress)
         self._worker.log.connect(self.log_view.appendPlainText)

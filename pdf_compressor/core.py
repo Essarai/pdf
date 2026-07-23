@@ -308,7 +308,7 @@ def compress_pdf(
     if min_file_size > 0 and result.original_size <= min_file_size:
         result.skipped = True
         result.skip_reason = (
-            f"文件大小 {result.original_size}B ≤ 阈值 {min_file_size}B"
+            f"文件大小 {result.original_size / 1024:.1f}KB ≤ 阈值 {min_file_size / 1024:.0f}KB"
         )
         result.new_size = result.original_size
         return result
