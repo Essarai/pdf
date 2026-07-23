@@ -37,6 +37,30 @@ pip install -r requirements.txt
 python main.py
 ```
 
+## Windows EXE（GitHub Actions）
+
+推送到 `main` 或手动触发 Actions 后，会在 **Actions → Build Windows EXE** 产物中上传
+`PDFImageCompressor.exe`（PyInstaller onefile + windowed）。
+
+打 tag 发布示例：
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+tag 触发时会额外创建 GitHub Release，并附带该 exe。
+
+本地自行打包（可选）：
+
+```bash
+pip install pyinstaller
+pyinstaller --noconfirm --clean --windowed --onefile \
+  --name PDFImageCompressor \
+  --collect-all PyQt6 --collect-all pymupdf --collect-all PIL \
+  main.py
+```
+
 ## 使用说明
 
 1. 选择要扫描的源目录（会递归查找其下所有 PDF）。

@@ -5,5 +5,10 @@ __pycache__/
 .DS_Store
 *.tmp_compress
 
+# PyInstaller 产物
+build/
+dist/
+*.spec
+
 # 本地测试用样例文件，不纳入版本控制
 test/
