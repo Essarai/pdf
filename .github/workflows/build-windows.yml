@@ -29,17 +29,13 @@ jobs:
           pip install pyinstaller
 
       - name: Build EXE with PyInstaller
-        run: |
-          pyinstaller `
-            --noconfirm `
-            --clean `
-            --windowed `
-            --onefile `
-            --name PDFImageCompressor `
-            --collect-all PyQt6 `
-            --collect-all pymupdf `
-            --collect-all PIL `
-            main.py
+        # Use a single-line command: PowerShell backtick continuation under
+        # YAML `|` keeps leading spaces on following lines and is fragile.
+        run: >-
+          pyinstaller --noconfirm --clean --windowed --onefile
+          --name PDFImageCompressor
+          --collect-all PyQt6 --collect-all pymupdf --collect-all PIL
+          main.py
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
